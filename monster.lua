@@ -1,22 +1,15 @@
---[[  MOBILE-COMPATIBLE GUI (phone/tablet/pc)
-     - Scrolling layout
-     - Touch-first inputs (Activated)
-     - Large tap targets + auto-scaling text
-     - Safe area aware
---]]
-
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local GuiService = game:GetService("GuiService")
-local CAS = game:GetService("ContextActionService")
-
+local Players = game:GetService('Players')
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+local playerGui = player:WaitForChild('PlayerGui')
+local UserInputService = game:GetService('UserInputService')
+local TweenService = game:GetService('TweenService')
 
--- ScreenGui
-local gui = Instance.new("ScreenGui")
-gui.Name = "ModularGUI"
+-- Mobile detection
+local IS_MOBILE = UserInputService.TouchEnabled
+
+-- Main GUI creation
+local gui = Instance.new('ScreenGui')
+gui.Name = 'ModularGUI'
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.DisplayOrder = 10
@@ -25,65 +18,50 @@ gui.Parent = playerGui
 
 -- Color scheme
 local colors = {
-	background   = Color3.fromRGB(30, 30, 40),
-	header       = Color3.fromRGB(40, 40, 50),
-	text         = Color3.fromRGB(255, 255, 255),
-	subtext      = Color3.fromRGB(200, 200, 200),
-	button       = Color3.fromRGB(70, 70, 80),
-	buttonHover  = Color3.fromRGB(90, 90, 100), -- used as "pressed" on mobile
-	toggleOff    = Color3.fromRGB(60, 60, 70),
-	toggleOn     = Color3.fromRGB(0, 170, 127),
-	input        = Color3.fromRGB(50, 50, 60),
-	shadow       = Color3.new(0, 0, 0),
+    background = Color3.fromRGB(30, 30, 40),
+    header = Color3.fromRGB(40, 40, 50),
+    text = Color3.fromRGB(255, 255, 255),
+    subtext = Color3.fromRGB(200, 200, 200),
+    button = Color3.fromRGB(70, 70, 80),
+    buttonHover = Color3.fromRGB(90, 90, 100),
+    toggleOff = Color3.fromRGB(60, 60, 70),
+    toggleOn = Color3.fromRGB(0, 170, 127),
+    input = Color3.fromRGB(50, 50, 60),
 }
 
--- device safe area padding helper
-local function getSafePadding()
-	-- emulate safe area: top bar + notches
-	local topLeftInset, bottomRightInset = GuiService:GetGuiInset() -- Vector2
-	-- add small side padding on tall phones
-	return {
-		Top = topLeftInset.Y,
-		Left = math.max(8, topLeftInset.X),
-		Right = math.max(8, bottomRightInset.X),
-		Bottom = math.max(8, bottomRightInset.Y)
-	}
-end
+-- Mobile-optimized sizes
+local MOBILE_SCALE = 1.3
+local BASE_WIDTH = IS_MOBILE and 350 or 300
+local BASE_ELEMENT_HEIGHT = IS_MOBILE and 45 or 35
+local BASE_FONT_SIZE = IS_MOBILE and 16 or 14
+local SMALL_FONT_SIZE = IS_MOBILE and 14 or 12
 
--- responsive width helper (card max ~360px on phone, 420 on tablet/pc)
-local function getTargetWidth()
-	local vp = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
-	local isPortrait = vp.Y > vp.X
-	local maxWidth = isPortrait and 360 or 420
-	-- keep some margins
-	local margin = 24
-	return math.min(maxWidth, vp.X - margin * 2)
-end
-
--- Main container (floating card)
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
+-- Main container
+local mainFrame = Instance.new('Frame')
+mainFrame.Name = 'MainFrame'
 mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 mainFrame.BackgroundColor3 = colors.background
-mainFrame.BackgroundTransparency = 0.1
+mainFrame.BackgroundTransparency = 0.2
 mainFrame.BorderSizePixel = 0
-mainFrame.Position = UDim2.fromScale(0.5, 0.5)
-mainFrame.Size = UDim2.new(0, getTargetWidth(), 0, 420)
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+mainFrame.Size = UDim2.new(0, BASE_WIDTH, 0, 0)
 mainFrame.Parent = gui
 
-local corner = Instance.new("UICorner")
+-- Round corners
+local corner = Instance.new('UICorner')
 corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = mainFrame
 
-local shadow = Instance.new("ImageLabel")
-shadow.Name = "Shadow"
+-- Shadow effect
+local shadow = Instance.new('ImageLabel')
+shadow.Name = 'Shadow'
 shadow.AnchorPoint = Vector2.new(0.5, 0.5)
 shadow.BackgroundTransparency = 1
 shadow.BorderSizePixel = 0
 shadow.Position = UDim2.new(0.5, 0, 0.5, 6)
-shadow.Size = UDim2.new(1, 20, 1, 20)
-shadow.Image = "rbxassetid://1316045217"
-shadow.ImageColor3 = colors.shadow
+shadow.Size = UDim2.new(1, 15, 1, 15)
+shadow.Image = 'rbxassetid://1316045217'
+shadow.ImageColor3 = Color3.new(0, 0, 0)
 shadow.ImageTransparency = 0.8
 shadow.ScaleType = Enum.ScaleType.Slice
 shadow.SliceCenter = Rect.new(10, 10, 118, 118)
@@ -91,437 +69,610 @@ shadow.Parent = mainFrame
 shadow.ZIndex = -1
 
 -- Title bar
-local titleBar = Instance.new("Frame")
-titleBar.Name = "TitleBar"
+local titleBar = Instance.new('Frame')
+titleBar.Name = 'TitleBar'
 titleBar.BackgroundColor3 = colors.header
 titleBar.BorderSizePixel = 0
-titleBar.Size = UDim2.new(1, 0, 0, 40)
+titleBar.Size = UDim2.new(1, 0, 0, IS_MOBILE and 40 or 30)
 titleBar.Parent = mainFrame
 
-local titleCorner = Instance.new("UICorner")
+local titleCorner = Instance.new('UICorner')
 titleCorner.CornerRadius = UDim.new(0, 12)
 titleCorner.Parent = titleBar
 
-local title = Instance.new("TextLabel")
-title.Name = "Title"
+local title = Instance.new('TextLabel')
+title.Name = 'Title'
 title.BackgroundTransparency = 1
-title.Position = UDim2.new(0, 12, 0, 0)
-title.Size = UDim2.new(1, -60, 1, 0)
+title.Position = UDim2.new(0, 15, 0, 0)
+title.Size = UDim2.new(1, -50, 1, 0)
 title.Font = Enum.Font.GothamSemibold
-title.Text = "BasicIsBetter! SUBSCRIBE!"
+title.Text = 'BasicIsBetter! SUBSCRIBE!'
 title.TextColor3 = colors.text
-title.TextSize = 16
+title.TextSize = IS_MOBILE and 16 or 14
 title.TextXAlignment = Enum.TextXAlignment.Left
-title.TextYAlignment = Enum.TextYAlignment.Center
 title.Parent = titleBar
 
--- Close
-local closeButton = Instance.new("TextButton")
-closeButton.Name = "CloseButton"
+-- Close button (larger for mobile)
+local closeButton = Instance.new('TextButton')
+closeButton.Name = 'CloseButton'
 closeButton.AnchorPoint = Vector2.new(1, 0.5)
 closeButton.BackgroundTransparency = 1
-closeButton.Position = UDim2.new(1, -10, 0.5, 0)
-closeButton.Size = UDim2.new(0, 28, 0, 28)
+closeButton.Position = UDim2.new(1, -15, 0.5, 0)
+closeButton.Size = UDim2.new(0, IS_MOBILE and 30 : 20, 0, IS_MOBILE and 30 : 20)
 closeButton.Font = Enum.Font.GothamBold
-closeButton.Text = "✕"
+closeButton.Text = 'X'
 closeButton.TextColor3 = colors.text
-closeButton.TextSize = 18
-closeButton.AutoButtonColor = false
+closeButton.TextSize = IS_MOBILE and 18 or 14
 closeButton.Parent = titleBar
-closeButton.Activated:Connect(function()
-	gui:Destroy()
+
+closeButton.MouseButton1Click:Connect(function()
+    gui:Destroy()
 end)
 
--- Content area (scrolling)
-local content = Instance.new("ScrollingFrame")
-content.Name = "Content"
-content.BackgroundTransparency = 1
-content.Position = UDim2.new(0, 0, 0, titleBar.Size.Y.Offset)
-content.Size = UDim2.new(1, 0, 1, -titleBar.Size.Y.Offset)
-content.ScrollBarThickness = 6
-content.AutomaticCanvasSize = Enum.AutomaticSize.Y
-content.CanvasSize = UDim2.new(0, 0, 0, 0)
-content.ClipsDescendants = true
-content.Parent = mainFrame
-
-local pad = Instance.new("UIPadding")
-pad.PaddingTop = UDim.new(0, 12 + getSafePadding().Top)
-pad.PaddingBottom = UDim.new(0, 12 + getSafePadding().Bottom)
-pad.PaddingLeft = UDim.new(0, 12 + getSafePadding().Left)
-pad.PaddingRight = UDim.new(0, 12 + getSafePadding().Right)
-pad.Parent = content
-
-local list = Instance.new("UIListLayout")
-list.SortOrder = Enum.SortOrder.LayoutOrder
-list.Padding = UDim.new(0, 8)
-list.Parent = content
-
--- shared builders
-local function mkTextLabel(text, size, color)
-	local lbl = Instance.new("TextLabel")
-	lbl.BackgroundTransparency = 1
-	lbl.Size = UDim2.new(1, 0, 0, 20)
-	lbl.Font = Enum.Font.Gotham
-	lbl.Text = text
-	lbl.TextColor3 = color or colors.text
-	lbl.TextSize = size or 14
-	lbl.TextXAlignment = Enum.TextXAlignment.Left
-	lbl.TextWrapped = false
-	return lbl
+-- Mobile-optimized touch feedback
+local function createTouchFeedback(button)
+    if not IS_MOBILE then return end
+    
+    local feedback = Instance.new('Frame')
+    feedback.Name = 'TouchFeedback'
+    feedback.BackgroundColor3 = Color3.new(1, 1, 1)
+    feedback.BackgroundTransparency = 0.8
+    feedback.Size = UDim2.new(1, 0, 1, 0)
+    feedback.BorderSizePixel = 0
+    feedback.Parent = button
+    feedback.ZIndex = 5
+    
+    local corner = Instance.new('UICorner')
+    corner.CornerRadius = button:FindFirstChildWhichIsA('UICorner') and button:FindFirstChildWhichIsA('UICorner').CornerRadius or UDim.new(0, 4)
+    corner.Parent = feedback
+    
+    -- Animate feedback
+    local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local tween = TweenService:Create(feedback, tweenInfo, {BackgroundTransparency = 1})
+    
+    button.MouseButton1Down:Connect(function()
+        feedback.BackgroundTransparency = 0.8
+        tween:Play()
+    end)
 end
 
-local function mkButton(text)
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(1, 0, 0, 44) -- large tap target
-	btn.BackgroundColor3 = colors.button
-	btn.BorderSizePixel = 0
-	btn.AutoButtonColor = false
-	btn.Text = text
-	btn.TextColor3 = colors.text
-	btn.TextSize = 16
-	btn.Font = Enum.Font.GothamSemibold
-	local c = Instance.new("UICorner", btn)
-	c.CornerRadius = UDim.new(0, 6)
+-- Content frame
+local contentFrame = Instance.new('Frame')
+contentFrame.Name = 'ContentFrame'
+contentFrame.BackgroundTransparency = 1
+contentFrame.Position = UDim2.new(0, 15, 0, IS_MOBILE and 50 : 40)
+contentFrame.Size = UDim2.new(1, -30, 1, -(IS_MOBILE and 60 : 50))
+contentFrame.Parent = mainFrame
 
-	-- press feedback (works on touch/mouse/gamepad)
-	btn.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1
-		or input.UserInputType == Enum.UserInputType.Touch
-		or input.KeyCode == Enum.KeyCode.ButtonA then
-			btn.BackgroundColor3 = colors.buttonHover
-		end
-	end)
-	btn.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1
-		or input.UserInputType == Enum.UserInputType.Touch
-		or input.KeyCode == Enum.KeyCode.ButtonA then
-			btn.BackgroundColor3 = colors.button
-		end
-	end)
-	return btn
+-- Auto-layout variables
+local currentYPosition = 0
+local elementPadding = IS_MOBILE and 8 or 5
+local sectionPadding = IS_MOBILE and 20 or 15
+
+-- Player name input (automatically added)
+local playerInputFrame = Instance.new('Frame')
+playerInputFrame.Name = 'PlayerInputFrame'
+playerInputFrame.BackgroundTransparency = 1
+playerInputFrame.Position = UDim2.new(0, 0, 0, currentYPosition)
+playerInputFrame.Size = UDim2.new(1, 0, 0, IS_MOBILE and 70 : 60)
+playerInputFrame.Parent = contentFrame
+
+local playerLabel = Instance.new('TextLabel')
+playerLabel.Name = 'PlayerLabel'
+playerLabel.BackgroundTransparency = 1
+playerLabel.Position = UDim2.new(0, 0, 0, 0)
+playerLabel.Size = UDim2.new(1, 0, 0, IS_MOBILE and 25 : 20)
+playerLabel.Font = Enum.Font.Gotham
+playerLabel.Text = 'Player Name:'
+playerLabel.TextColor3 = colors.subtext
+playerLabel.TextSize = SMALL_FONT_SIZE
+playerLabel.TextXAlignment = Enum.TextXAlignment.Left
+playerLabel.Parent = playerInputFrame
+
+local playerInput = Instance.new('TextBox')
+playerInput.Name = 'PlayerInput'
+playerInput.BackgroundColor3 = colors.input
+playerInput.BorderSizePixel = 0
+playerInput.Position = UDim2.new(0, 0, 0, IS_MOBILE and 30 : 25)
+playerInput.Size = UDim2.new(1, 0, 0, IS_MOBILE and 35 : 30)
+playerInput.Font = Enum.Font.Gotham
+playerInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+playerInput.PlaceholderText = 'Enter player name'
+playerInput.Text = ''
+playerInput.TextColor3 = colors.text
+playerInput.TextSize = BASE_FONT_SIZE
+playerInput.TextXAlignment = Enum.TextXAlignment.Left
+playerInput.Parent = playerInputFrame
+
+local inputCorner = Instance.new('UICorner')
+inputCorner.CornerRadius = UDim.new(0, 6)
+inputCorner.Parent = playerInput
+
+local inputPadding = Instance.new('UIPadding')
+inputPadding.PaddingLeft = UDim.new(0, 10)
+inputPadding.Parent = playerInput
+
+currentYPosition = currentYPosition + (IS_MOBILE and 70 : 60) + sectionPadding
+
+-- Function to update main frame size
+local function UpdateFrameSize()
+    local totalHeight = (IS_MOBILE and 50 : 40) + currentYPosition + 15
+    mainFrame.Size = UDim2.new(0, BASE_WIDTH, 0, totalHeight)
 end
 
-local function mkFieldBox(placeholder)
-	local tb = Instance.new("TextBox")
-	tb.Size = UDim2.new(1, 0, 0, 40)
-	tb.BackgroundColor3 = colors.input
-	tb.BorderSizePixel = 0
-	tb.Font = Enum.Font.Gotham
-	tb.PlaceholderColor3 = Color3.fromRGB(160, 160, 160)
-	tb.PlaceholderText = placeholder or ""
-	tb.Text = ""
-	tb.TextColor3 = colors.text
-	tb.TextSize = 16
-	tb.TextXAlignment = Enum.TextXAlignment.Left
-	local c = Instance.new("UICorner", tb) c.CornerRadius = UDim.new(0, 6)
-	local p = Instance.new("UIPadding", tb) p.PaddingLeft = UDim.new(0, 10)
-	return tb
+--[[
+    ELEMENT CREATION FUNCTIONS
+]]
+
+-- Create a new section label
+function CreateSection(titleText)
+    local sectionFrame = Instance.new('Frame')
+    sectionFrame.Name = titleText .. 'Section'
+    sectionFrame.BackgroundTransparency = 1
+    sectionFrame.Position = UDim2.new(0, 0, 0, currentYPosition)
+    sectionFrame.Size = UDim2.new(1, 0, 0, IS_MOBILE and 25 : 20)
+    sectionFrame.Parent = contentFrame
+
+    local label = Instance.new('TextLabel')
+    label.Name = 'Label'
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Font = Enum.Font.Gotham
+    label.Text = titleText
+    label.TextColor3 = colors.subtext
+    label.TextSize = SMALL_FONT_SIZE
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = sectionFrame
+
+    currentYPosition = currentYPosition + (IS_MOBILE and 25 : 20) + elementPadding
+    UpdateFrameSize()
+
+    return sectionFrame
 end
 
--- Section
-local function CreateSection(titleText)
-	local holder = Instance.new("Frame")
-	holder.BackgroundTransparency = 1
-	holder.Size = UDim2.new(1, 0, 0, 22)
-	holder.LayoutOrder = #content:GetChildren()
+-- Create a new button
+function CreateButton(buttonName, callback)
+    local button = Instance.new('TextButton')
+    button.Name = buttonName
+    button.BackgroundColor3 = colors.button
+    button.BorderSizePixel = 0
+    button.Position = UDim2.new(0, 0, 0, currentYPosition)
+    button.Size = UDim2.new(1, 0, 0, BASE_ELEMENT_HEIGHT)
+    button.Font = Enum.Font.GothamSemibold
+    button.Text = buttonName
+    button.TextColor3 = colors.text
+    button.TextSize = BASE_FONT_SIZE
+    button.Parent = contentFrame
 
-	local label = mkTextLabel(titleText, 12, colors.subtext)
-	label.Parent = holder
-	holder.Parent = content
-	return holder
+    -- Add corner rounding
+    local buttonCorner = Instance.new('UICorner')
+    buttonCorner.CornerRadius = UDim.new(0, 6)
+    buttonCorner.Parent = button
+
+    -- Add touch feedback for mobile
+    createTouchFeedback(button)
+
+    -- Hover effects (only on desktop)
+    if not IS_MOBILE then
+        button.MouseEnter:Connect(function()
+            button.BackgroundColor3 = colors.buttonHover
+        end)
+
+        button.MouseLeave:Connect(function()
+            button.BackgroundColor3 = colors.button
+        end)
+    end
+
+    -- Click handler
+    button.MouseButton1Click:Connect(function()
+        callback(playerInput.Text)
+    end)
+
+    currentYPosition = currentYPosition + BASE_ELEMENT_HEIGHT + elementPadding
+    UpdateFrameSize()
+
+    return button
 end
 
--- Label
-local function CreateLabel(text)
-	local lbl = mkTextLabel(text, 14, colors.text)
-	lbl.Size = UDim2.new(1, 0, 0, 22)
-	lbl.Parent = content
-	return lbl
+-- Create a new toggle
+function CreateToggle(toggleName, defaultState, callback)
+    local toggleFrame = Instance.new('Frame')
+    toggleFrame.Name = toggleName .. 'Toggle'
+    toggleFrame.BackgroundTransparency = 1
+    toggleFrame.Position = UDim2.new(0, 0, 0, currentYPosition)
+    toggleFrame.Size = UDim2.new(1, 0, 0, IS_MOBILE and 40 : 30)
+    toggleFrame.Parent = contentFrame
+
+    local label = Instance.new('TextLabel')
+    label.Name = 'Label'
+    label.BackgroundTransparency = 1
+    label.Position = UDim2.new(0, 0, 0, 0)
+    label.Size = UDim2.new(0.7, 0, 1, 0)
+    label.Font = Enum.Font.Gotham
+    label.Text = toggleName
+    label.TextColor3 = colors.text
+    label.TextSize = BASE_FONT_SIZE
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = toggleFrame
+
+    local toggleButton = Instance.new('TextButton')
+    toggleButton.Name = 'ToggleButton'
+    toggleButton.AnchorPoint = Vector2.new(1, 0.5)
+    toggleButton.BackgroundColor3 = defaultState and colors.toggleOn or colors.toggleOff
+    toggleButton.BorderSizePixel = 0
+    toggleButton.Position = UDim2.new(1, 0, 0.5, 0)
+    toggleButton.Size = UDim2.new(0, IS_MOBILE and 60 : 50, 0, IS_MOBILE and 30 : 25)
+    toggleButton.Font = Enum.Font.Gotham
+    toggleButton.Text = defaultState and 'ON' or 'OFF'
+    toggleButton.TextColor3 = colors.text
+    toggleButton.TextSize = IS_MOBILE and 14 : 12
+    toggleButton.Parent = toggleFrame
+
+    local toggleCorner = Instance.new('UICorner')
+    toggleCorner.CornerRadius = UDim.new(0, IS_MOBILE and 15 : 12)
+    toggleCorner.Parent = toggleButton
+
+    -- Add touch feedback for mobile
+    createTouchFeedback(toggleButton)
+
+    toggleButton.MouseButton1Click:Connect(function()
+        local newState = not (toggleButton.Text == 'ON')
+        toggleButton.Text = newState and 'ON' or 'OFF'
+        toggleButton.BackgroundColor3 = newState and colors.toggleOn or colors.toggleOff
+        callback(newState, playerInput.Text)
+    end)
+
+    currentYPosition = currentYPosition + (IS_MOBILE and 40 : 30) + elementPadding
+    UpdateFrameSize()
+
+    return toggleFrame
 end
 
--- Button
-local function CreateButton(buttonName, callback)
-	local btn = mkButton(buttonName)
-	btn.Parent = content
-	btn.Activated:Connect(function()
-		callback(playerInput.Text)
-	end)
-	return btn
+-- Create a label
+function CreateLabel(labelText)
+    local label = Instance.new('TextLabel')
+    label.Name = labelText .. 'Label'
+    label.BackgroundTransparency = 1
+    label.Position = UDim2.new(0, 0, 0, currentYPosition)
+    label.Size = UDim2.new(1, 0, 0, IS_MOBILE and 25 : 20)
+    label.Font = Enum.Font.Gotham
+    label.Text = labelText
+    label.TextColor3 = colors.text
+    label.TextSize = BASE_FONT_SIZE
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = contentFrame
+
+    currentYPosition = currentYPosition + (IS_MOBILE and 25 : 20) + elementPadding
+    UpdateFrameSize()
+
+    return label
 end
 
--- Toggle
-local function CreateToggle(toggleName, defaultState, callback)
-	local row = Instance.new("Frame")
-	row.BackgroundTransparency = 1
-	row.Size = UDim2.new(1, 0, 0, 40)
-	row.Parent = content
+-- Mobile-optimized dropdown
+function CreateDropdown(name, options, callback)
+    local dropdownHeight = IS_MOBILE and 40 or 30
+    local optionHeight = IS_MOBILE and 40 or 30
+    local expandedHeight = dropdownHeight + (optionHeight * #options)
 
-	local lbl = mkTextLabel(toggleName, 14, colors.text)
-	lbl.Size = UDim2.new(0.7, 0, 1, 0)
-	lbl.Parent = row
+    local originalYPosition = currentYPosition
 
-	local btn = Instance.new("TextButton")
-	btn.AnchorPoint = Vector2.new(1, 0.5)
-	btn.Position = UDim2.new(1, 0, 0.5, 0)
-	btn.Size = UDim2.new(0, 70, 0, 30)
-	btn.AutoButtonColor = false
-	btn.BackgroundColor3 = defaultState and colors.toggleOn or colors.toggleOff
-	btn.BorderSizePixel = 0
-	btn.Text = defaultState and "ON" or "OFF"
-	btn.TextColor3 = colors.text
-	btn.TextSize = 14
-	btn.Font = Enum.Font.Gotham
-	btn.Parent = row
-	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 15)
+    -- Create main container frame
+    local dropdownContainer = Instance.new('Frame')
+    dropdownContainer.Name = name .. 'DropdownContainer'
+    dropdownContainer.BackgroundTransparency = 1
+    dropdownContainer.Position = UDim2.new(0, 0, 0, originalYPosition)
+    dropdownContainer.Size = UDim2.new(1, 0, 0, dropdownHeight)
+    dropdownContainer.ClipsDescendants = true
+    dropdownContainer.Parent = contentFrame
 
-	btn.Activated:Connect(function()
-		local newState = btn.Text ~= "ON"
-		btn.Text = newState and "ON" or "OFF"
-		btn.BackgroundColor3 = newState and colors.toggleOn or colors.toggleOff
-		callback(newState, playerInput.Text)
-	end)
+    -- Create the selected option button
+    local selectedButton = Instance.new('TextButton')
+    selectedButton.Name = 'SelectedButton'
+    selectedButton.BackgroundColor3 = colors.input
+    selectedButton.Size = UDim2.new(1, 0, 0, dropdownHeight)
+    selectedButton.Font = Enum.Font.Gotham
+    selectedButton.Text = 'Select ' .. name
+    selectedButton.TextColor3 = colors.text
+    selectedButton.TextSize = BASE_FONT_SIZE
+    selectedButton.TextXAlignment = Enum.TextXAlignment.Left
+    selectedButton.ZIndex = 2
+    selectedButton.Parent = dropdownContainer
 
-	return row
+    local selectedCorner = Instance.new('UICorner')
+    selectedCorner.CornerRadius = UDim.new(0, 6)
+    selectedCorner.Parent = selectedButton
+
+    local selectedPadding = Instance.new('UIPadding')
+    selectedPadding.PaddingLeft = UDim.new(0, 10)
+    selectedPadding.Parent = selectedButton
+
+    -- Add touch feedback for mobile
+    createTouchFeedback(selectedButton)
+
+    -- Create dropdown frame that will contain all options
+    local dropdownFrame = Instance.new('Frame')
+    dropdownFrame.Name = 'DropdownFrame'
+    dropdownFrame.BackgroundColor3 = colors.background
+    dropdownFrame.BackgroundTransparency = 0.1
+    dropdownFrame.Position = UDim2.new(0, 0, 0, dropdownHeight)
+    dropdownFrame.Size = UDim2.new(1, 0, 0, 0)
+    dropdownFrame.Visible = false
+    dropdownFrame.ZIndex = 10
+    dropdownFrame.Parent = dropdownContainer
+
+    local dropdownFrameCorner = Instance.new('UICorner')
+    dropdownFrameCorner.CornerRadius = UDim.new(0, 6)
+    dropdownFrameCorner.Parent = dropdownFrame
+
+    -- Create options
+    for i, option in ipairs(options) do
+        local optionButton = Instance.new('TextButton')
+        optionButton.Name = option
+        optionButton.BackgroundColor3 = colors.input
+        optionButton.BorderSizePixel = 0
+        optionButton.Position = UDim2.new(0, 0, 0, (i - 1) * optionHeight)
+        optionButton.Size = UDim2.new(1, 0, 0, optionHeight)
+        optionButton.Font = Enum.Font.Gotham
+        optionButton.Text = option
+        optionButton.TextColor3 = colors.text
+        optionButton.TextSize = BASE_FONT_SIZE
+        optionButton.TextXAlignment = Enum.TextXAlignment.Left
+        optionButton.ZIndex = 11
+        optionButton.Parent = dropdownFrame
+
+        local corner = Instance.new('UICorner')
+        corner.CornerRadius = UDim.new(0, 4)
+        corner.Parent = optionButton
+
+        local padding = Instance.new('UIPadding')
+        padding.PaddingLeft = UDim.new(0, 10)
+        padding.Parent = optionButton
+
+        -- Add touch feedback for mobile
+        createTouchFeedback(optionButton)
+
+        optionButton.MouseButton1Click:Connect(function()
+            selectedButton.Text = option
+            dropdownFrame.Visible = false
+            dropdownContainer.Size = UDim2.new(1, 0, 0, dropdownHeight)
+            callback(option, playerInput.Text)
+        end)
+    end
+
+    -- Toggle dropdown visibility
+    local isExpanded = false
+    selectedButton.MouseButton1Click:Connect(function()
+        isExpanded = not isExpanded
+
+        if isExpanded then
+            dropdownFrame.Visible = true
+            dropdownFrame.Size = UDim2.new(1, 0, 0, optionHeight * #options)
+            dropdownContainer.Size = UDim2.new(1, 0, 0, expandedHeight)
+            dropdownContainer.ZIndex = 10
+            selectedButton.ZIndex = 11
+            dropdownFrame.ZIndex = 10
+        else
+            dropdownFrame.Visible = false
+            dropdownFrame.Size = UDim2.new(1, 0, 0, 0)
+            dropdownContainer.Size = UDim2.new(1, 0, 0, dropdownHeight)
+            dropdownContainer.ZIndex = 1
+            selectedButton.ZIndex = 2
+            dropdownFrame.ZIndex = 1
+        end
+    end)
+
+    -- Close dropdown when clicking elsewhere (improved for mobile)
+    local inputConnection
+    inputConnection = UserInputService.InputBegan:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and isExpanded then
+            local mousePos = input.Position
+            local absolutePos = dropdownContainer.AbsolutePosition
+            local absoluteSize = dropdownContainer.AbsoluteSize
+
+            if not (mousePos.X >= absolutePos.X and mousePos.X <= absolutePos.X + absoluteSize.X and
+                   mousePos.Y >= absolutePos.Y and mousePos.Y <= absolutePos.Y + absoluteSize.Y) then
+                isExpanded = false
+                dropdownFrame.Visible = false
+                dropdownFrame.Size = UDim2.new(1, 0, 0, 0)
+                dropdownContainer.Size = UDim2.new(1, 0, 0, dropdownHeight)
+                dropdownContainer.ZIndex = 1
+                selectedButton.ZIndex = 2
+                dropdownFrame.ZIndex = 1
+            end
+        end
+    end)
+
+    dropdownContainer.Destroying:Connect(function()
+        if inputConnection then
+            inputConnection:Disconnect()
+        end
+    end)
+
+    currentYPosition = currentYPosition + dropdownHeight + elementPadding
+    UpdateFrameSize()
+
+    return dropdownContainer
 end
 
--- Dropdown (tap-friendly)
-local function CreateDropdown(name, options, callback)
-	local container = Instance.new("Frame")
-	container.BackgroundTransparency = 1
-	container.Size = UDim2.new(1, 0, 0, 40)
-	container.Parent = content
+-- Improved draggable window functionality for mobile
+local dragging = false
+local dragInput
+local dragStart
+local startPos
 
-	local selected = mkButton("Select " .. name)
-	selected.Size = UDim2.new(1, 0, 1, 0)
-	selected.Parent = container
-
-	local drop = Instance.new("Frame")
-	drop.BackgroundColor3 = colors.background
-	drop.Visible = false
-	drop.Size = UDim2.new(1, 0, 0, 0)
-	drop.ClipsDescendants = true
-	drop.Parent = content
-	Instance.new("UICorner", drop).CornerRadius = UDim.new(0, 6)
-
-	local innerList = Instance.new("UIListLayout")
-	innerList.SortOrder = Enum.SortOrder.LayoutOrder
-	innerList.Parent = drop
-
-	local function setExpanded(expand)
-		if expand then
-			drop.Visible = true
-			drop.Size = UDim2.new(1, 0, 0, #options * 40)
-			-- trap back button to close
-			CAS:BindAction("CloseDropdown", function(_, state)
-				if state == Enum.UserInputState.Begin then
-					setExpanded(false)
-				}
-				return Enum.ContextActionResult.Sink
-			end, false, Enum.KeyCode.ButtonB)
-		else
-			drop.Visible = false
-			drop.Size = UDim2.new(1, 0, 0, 0)
-			CAS:UnbindAction("CloseDropdown")
-		end
-	end
-
-	selected.Activated:Connect(function()
-		setExpanded(not drop.Visible)
-	end)
-
-	-- options
-	for _, opt in ipairs(options) do
-		local optBtn = mkButton(opt)
-		optBtn.Size = UDim2.new(1, 0, 0, 40)
-		optBtn.Parent = drop
-		optBtn.Activated:Connect(function()
-			selected.Text = opt
-			setExpanded(false)
-			callback(opt, playerInput.Text)
-		end)
-	end
-
-	-- close on outside tap
-	UserInputService.InputBegan:Connect(function(input, gp)
-		if gp or not drop.Visible then return end
-		if input.UserInputType == Enum.UserInputType.MouseButton1
-		or input.UserInputType == Enum.UserInputType.Touch then
-			local pos = input.Position
-			local inSel = selected.AbsolutePosition
-			local selSize = selected.AbsoluteSize
-			local inDrop = drop.AbsolutePosition
-			local dropSize = drop.AbsoluteSize
-			local insideSelected = pos.X >= inSel.X and pos.X <= inSel.X + selSize.X and pos.Y >= inSel.Y and pos.Y <= inSel.Y + selSize.Y
-			local insideDrop = pos.X >= inDrop.X and pos.X <= inDrop.X + dropSize.X and pos.Y >= inDrop.Y and pos.Y <= inDrop.Y + dropSize.Y
-			if not insideSelected and not insideDrop then
-				setExpanded(false)
-			end
-		end
-	end)
-
-	return container
+local function update(input)
+    local delta = input.Position - dragStart
+    mainFrame.Position = UDim2.new(
+        startPos.X.Scale,
+        startPos.X.Offset + delta.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + delta.Y
+    )
 end
 
--- Draggable (mouse + touch)
-do
-	local dragging = false
-	local dragStart, startPos
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        
+        if IS_MOBILE then
+            -- Visual feedback for dragging on mobile
+            local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            local tween = TweenService:Create(mainFrame, tweenInfo, {BackgroundTransparency = 0.1})
+            tween:Play()
+        end
 
-	local function update(input)
-		local delta = input.Position - dragStart
-		mainFrame.Position = UDim2.new(
-			mainFrame.Position.X.Scale, startPos.X.Offset + delta.X,
-			mainFrame.Position.Y.Scale, startPos.Y.Offset + delta.Y
-		)
-	end
-
-	titleBar.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1
-		or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
-			dragStart = input.Position
-			startPos = mainFrame.Position
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then
-					dragging = false
-				end
-			end)
-		end
-	end)
-
-	titleBar.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement
-		or input.UserInputType == Enum.UserInputType.Touch then
-			RunService.Heartbeat:Wait()
-		end
-	end)
-
-	UserInputService.InputChanged:Connect(function(input)
-		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-			or input.UserInputType == Enum.UserInputType.Touch) then
-			update(input)
-		end
-	end)
-end
-
--- Responsive resize on orientation/viewport change
-local function resizeCard()
-	mainFrame.Size = UDim2.new(0, getTargetWidth(), 0, math.clamp(mainFrame.AbsoluteSize.Y, 360, 520))
-end
-workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
-	task.delay(0.1, resizeCard)
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+                if IS_MOBILE then
+                    local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+                    local tween = TweenService:Create(mainFrame, tweenInfo, {BackgroundTransparency = 0.2})
+                    tween:Play()
+                end
+            end
+        end)
+    end
 end)
-UserInputService:GetPropertyChangedSignal("WindowSize"):Connect(resizeCard)
 
--- ====== CONTENT ======
+titleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
 
--- Player name input
-do
-	local group = Instance.new("Frame")
-	group.BackgroundTransparency = 1
-	group.Size = UDim2.new(1, 0, 0, 62)
-	group.Parent = content
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
 
-	local playerLabel = mkTextLabel("Player Name:", 12, colors.subtext)
-	playerLabel.Size = UDim2.new(1, 0, 0, 18)
-	playerLabel.Parent = group
-
-	playerInput = mkFieldBox("Enter player name (case sensitive)")
-	playerInput.Position = UDim2.new(0, 0, 0, 22)
-	playerInput.Parent = group
+-- Auto-position for mobile to avoid thumb zone
+if IS_MOBILE then
+    mainFrame.Position = UDim2.new(0.5, 0, 0.3, 0)
 end
 
--- Sections & Buttons
-CreateSection("Random Shit")
-
-CreateButton("Damage player", function(playerName)
-	local targetName = string.sub(playerName or "", 1, 20)
-	local target = game.Players:FindFirstChild(targetName)
-	if target and target.Character then
-		game.ReplicatedStorage.Events.ClickAttack:FireServer(target.Character, 1, false)
-		local hum = target.Character:FindFirstChild("Humanoid")
-		if hum then
-			print(hum.Health .. " Remaining HP")
-		end
-	else
-		warn("Player not found: " .. tostring(targetName))
-	end
+-- Example usage (same as before):
+CreateSection('Random Shit')
+CreateButton('Damage player', function(playerName)
+    local targetName = string.sub(playerName or '', 1, 20)
+    if game.Players:FindFirstChild(targetName) and game.Players[targetName].Character then
+        game.ReplicatedStorage.Events.ClickAttack:FireServer(
+            game.Players[targetName].Character,
+            1,
+            false
+        )
+        print(
+            game.Players[targetName].Character:FindFirstChild('Humanoid').Health
+                .. ' Remaining HP'
+        )
+    else
+        print('Player not found or no character')
+    end
 end)
 
-CreateButton("Damage near", function()
-	for _, v in ipairs(game.Players:GetPlayers()) do
-		if v ~= player and v.Character and v.Character:FindFirstChild("Humanoid")
-			and v.Character.Humanoid.Health > 0 and v.Character:FindFirstChild("HumanoidRootPart") then
-			print("hitting " .. v.Name)
-			game.ReplicatedStorage.Events.ClickAttack:FireServer(v.Character, 1, false)
-			RunService.Heartbeat:Wait()
-		end
-	end
+CreateButton('Damage near', function(playerName)
+    for i, v in pairs(game.Players:GetPlayers()) do
+        if
+            v.Name ~= game.Players.LocalPlayer.Name
+            and v.Character
+            and v.Character.Humanoid
+            and v.Character.Humanoid.Health > 0
+            and v.Character.HumanoidRootPart
+        then
+            print('hitting ' .. v.Name)
+            game.ReplicatedStorage.Events.ClickAttack:FireServer(
+                v.Character,
+                1,
+                false
+            )
+        end
+    end
 end)
 
-CreateButton("Heal Bug Hit", function()
-	local wasp = workspace:FindFirstChild("Effects")
-		and workspace.Effects:FindFirstChild("Vigorwasps")
-		and workspace.Effects.Vigorwasps:FindFirstChild("Vigorwasp")
-	if wasp then
-		game.ReplicatedStorage.Events.VigorWaspEvent:FireServer(wasp)
-	else
-		warn("Vigorwasp not found")
-	end
+CreateButton('Heal Bug Hit', function()
+    if workspace.Effects.Vigorwasps:FindFirstChild('Vigorwasp') then
+        game.ReplicatedStorage.Events.VigorWaspEvent:FireServer(
+            workspace.Effects.Vigorwasps.Vigorwasp
+        )
+    end
 end)
 
-CreateSection("Toggle Features")
+CreateSection('Toggle Features')
 
 local killauraLoop
 local killauraActive = false
 
-CreateToggle("Killaura", false, function(state)
-	killauraActive = state
-	local attackEvent = game.ReplicatedStorage.Events.ClickAttack
-	local range = 30
-	local cooldown = 0.2
+CreateToggle('Killaura', false, function(state, playerName)
+    killauraActive = state
+    local player = game.Players.LocalPlayer
+    local attackEvent = game.ReplicatedStorage.Events.ClickAttack
+    local range = 30
+    local cooldown = 0.2
 
-	local function isValidTarget(target)
-		return target ~= player
-			and target.Character
-			and target.Character:FindFirstChild("Humanoid")
-			and target.Character.Humanoid.Health > 0
-			and target.Character:FindFirstChild("HumanoidRootPart")
-			and (target.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude < range
-	end
+    local function isValidTarget(target)
+        return target ~= player
+            and target.Character
+            and target.Character:FindFirstChild('Humanoid')
+            and target.Character.Humanoid.Health > 0
+            and target.Character:FindFirstChild('HumanoidRootPart')
+            and (
+                    target.Character.HumanoidRootPart.Position
+                    - player.Character.HumanoidRootPart.Position
+                ).Magnitude
+                < range
+    end
 
-	if killauraActive then
-		if killauraLoop then killauraLoop:Disconnect() end
-		killauraLoop = RunService.Heartbeat:Connect(function()
-			if not killauraActive then return end
-			if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
-			for _, t in ipairs(game.Players:GetPlayers()) do
-				if isValidTarget(t) then
-					attackEvent:FireServer(t.Character, 1, false)
-					task.wait(cooldown)
-				end
-			end
-		end)
-	else
-		if killauraLoop then killauraLoop:Disconnect() killauraLoop = nil end
-	end
+    if killauraActive then
+        if killauraLoop then
+            killauraLoop:Disconnect()
+        end
+
+        killauraLoop = game:GetService('RunService').Heartbeat:Connect(function()
+            if not killauraActive then
+                return
+            end
+            if not player.Character or not player.Character:FindFirstChild('HumanoidRootPart') then
+                return
+            end
+
+            for _, target in ipairs(game.Players:GetPlayers()) do
+                if isValidTarget(target) then
+                    print('Attacking ' .. target.Name)
+                    attackEvent:FireServer(target.Character, 1, false)
+                    task.wait(cooldown)
+                end
+            end
+        end)
+    else
+        if killauraLoop then
+            killauraLoop:Disconnect()
+            killauraLoop = nil
+        end
+    end
 end)
 
-CreateSection("Abilities")
+CreateSection('Abilities')
 
-CreateDropdown("Ability Select", { "Attack1", "Attack2", "Attack3", "Attack4", "Attack5" }, function(selected)
-	print("Selected ability:", selected, "on player:", player.Name)
-	local ev = game.ReplicatedStorage.Events:FindFirstChild("ReduceCooldown")
-	if ev and ev:FindFirstChild("OnClientEvent") then
-		-- firesignal is exploit-only in some environments; call the event if your environment supports it.
-		pcall(function()
-			firesignal(ev.OnClientEvent, selected, 444)
-		end)
-	else
-		warn("ReduceCooldown.OnClientEvent not found")
-	end
-end)
+CreateDropdown(
+    'Ability Select',
+    { 'Attack1', 'Attack2', 'Attack3', 'Attack4', 'Attack5' },
+    function(selected, playerName)
+        print(
+            'Selected ability:',
+            selected,
+            'on player:',
+            game.Players.LocalPlayer.Name
+        )
+        firesignal(
+            game.ReplicatedStorage.Events.ReduceCooldown.OnClientEvent,
+            selected,
+            444
+        )
+    end
+)
 
-CreateSection("Information")
-CreateLabel("Status: Ready")
-CreateLabel("Players Online: " .. #Players:GetPlayers())
+CreateSection('Information')
+CreateLabel('Status: Ready')
+CreateLabel('Players Online: ' .. #Players:GetPlayers())
