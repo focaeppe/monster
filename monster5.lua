@@ -560,7 +560,7 @@ CreateToggle('Killaura', false, function(state, playerName)
     killauraActive = state
     local player = game.Players.LocalPlayer
     local attackEvent = game.ReplicatedStorage.Events.ClickAttack
-    local range = 200
+    local range = 2000
     local cooldown = 0.2
 
     local function isValidTarget(target)
